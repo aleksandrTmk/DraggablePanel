@@ -17,7 +17,9 @@ package com.github.pedrovgs;
 
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.PointF;
 import android.graphics.drawable.Drawable;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.view.MotionEventCompat;
@@ -58,6 +60,8 @@ public class DraggableView extends RelativeLayout {
 
   private boolean enableHorizontalAlphaEffect;
   private boolean topViewResize;
+  private int     originalViewHeight;
+  private PointF  scaleFactor = new PointF();
 
   private DraggableListener listener;
 
@@ -81,6 +85,7 @@ public class DraggableView extends RelativeLayout {
    */
   public void setXTopViewScaleFactor(float xScaleFactor) {
     transformer.setXScaleFactor(xScaleFactor);
+    scaleFactor.x = xScaleFactor;
   }
 
   /**
@@ -89,6 +94,7 @@ public class DraggableView extends RelativeLayout {
    */
   public void setYTopViewScaleFactor(float yScaleFactor) {
     transformer.setYScaleFactor(yScaleFactor);
+    scaleFactor.y = yScaleFactor;
   }
 
   /**
@@ -112,8 +118,9 @@ public class DraggableView extends RelativeLayout {
    *
    * @param topFragmentHeight in pixels
    */
-  public void setTopViewHeight(float topFragmentHeight) {
-    transformer.setViewHeight((int) topFragmentHeight);
+  public void setTopViewHeight(int topFragmentHeight) {
+    transformer.setViewHeight(topFragmentHeight);
+    originalViewHeight = topFragmentHeight;
   }
 
   /**
@@ -169,7 +176,7 @@ public class DraggableView extends RelativeLayout {
    * Close the custom view applying an animation to close the view to the right side of the screen.
    */
   public void closeToRight() {
-    if (viewDragHelper.smoothSlideViewTo(dragView, (int) transformer.getOriginalWidth(),
+    if (viewDragHelper.smoothSlideViewTo(dragView, transformer.getOriginalWidth(),
         getHeight() - transformer.getMinHeightPlusMargin())) {
       ViewCompat.postInvalidateOnAnimation(this);
       notifyCloseToRightListener();
@@ -180,7 +187,7 @@ public class DraggableView extends RelativeLayout {
    * Close the custom view applying an animation to close the view to the left side of the screen.
    */
   public void closeToLeft() {
-    if (viewDragHelper.smoothSlideViewTo(dragView, (int) -transformer.getOriginalWidth(),
+    if (viewDragHelper.smoothSlideViewTo(dragView, -transformer.getOriginalWidth(),
         getHeight() - transformer.getMinHeightPlusMargin())) {
       ViewCompat.postInvalidateOnAnimation(this);
       notifyCloseToLeftListener();
@@ -242,7 +249,7 @@ public class DraggableView extends RelativeLayout {
   @Override public boolean onInterceptTouchEvent(MotionEvent ev) {
     final int action = MotionEventCompat.getActionMasked(ev);
 
-    if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
+    if (ev.getPointerCount() > 1 || action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
       viewDragHelper.cancel();
       return false;
     }
@@ -256,8 +263,10 @@ public class DraggableView extends RelativeLayout {
    * @param ev captured.
    * @return true if the touch event is realized over the drag or second view.
    */
-  @Override public boolean onTouchEvent(MotionEvent ev) {
-    viewDragHelper.processTouchEvent(ev);
+  @Override public boolean onTouchEvent(@NonNull MotionEvent ev) {
+    if (ev.getPointerCount() < 2) {
+      viewDragHelper.processTouchEvent(ev);
+    }
     if (isClosed()) {
       return false;
     }
@@ -293,8 +302,8 @@ public class DraggableView extends RelativeLayout {
     if (isInEditMode())
       super.onLayout(changed, left, top, right, bottom);
     else if (isDragViewAtTop()) {
-      dragView.layout(left, top, right, (int) transformer.getOriginalHeight());
-      secondView.layout(left, (int) transformer.getOriginalHeight(), right, bottom);
+      dragView.layout(left, top, right, transformer.getOriginalHeight());
+      secondView.layout(left, transformer.getOriginalHeight(), right, bottom);
 
       ViewHelper.setY(dragView, top);
       ViewHelper.setY(secondView, transformer.getOriginalHeight());
@@ -513,16 +522,20 @@ public class DraggableView extends RelativeLayout {
   private void initializeTransformer(TypedArray attributes) {
     topViewResize =
         attributes.getBoolean(R.styleable.draggable_view_top_view_resize, DEFAULT_TOP_VIEW_RESIZE);
+    scaleFactor.x =
+        attributes.getFloat(R.styleable.draggable_view_top_view_x_scale_factor, DEFAULT_SCALE_FACTOR);
+    scaleFactor.y =
+        attributes.getFloat(R.styleable.draggable_view_top_view_y_scale_factor, DEFAULT_SCALE_FACTOR);
+    originalViewHeight =
+        attributes.getDimensionPixelSize(R.styleable.draggable_view_top_view_height, DEFAULT_TOP_VIEW_HEIGHT);
+    if(originalViewHeight == DEFAULT_TOP_VIEW_HEIGHT)
+      originalViewHeight = dragView.getLayoutParams().height;
+
     TransformerFactory transformerFactory = new TransformerFactory();
     transformer = transformerFactory.getTransformer(topViewResize, dragView, this);
-    transformer.setViewHeight(attributes.getDimensionPixelSize(R.styleable.draggable_view_top_view_height,
-        DEFAULT_TOP_VIEW_HEIGHT));
-    transformer.setXScaleFactor(
-        attributes.getFloat(R.styleable.draggable_view_top_view_x_scale_factor,
-            DEFAULT_SCALE_FACTOR));
-    transformer.setYScaleFactor(
-        attributes.getFloat(R.styleable.draggable_view_top_view_y_scale_factor,
-            DEFAULT_SCALE_FACTOR));
+    transformer.setViewHeight(originalViewHeight);
+    transformer.setXScaleFactor(scaleFactor.x);
+    transformer.setYScaleFactor(scaleFactor.y);
     transformer.setMarginRight(
         attributes.getDimensionPixelSize(R.styleable.draggable_view_top_view_margin_right,
             DEFAULT_TOP_VIEW_MARGIN));
