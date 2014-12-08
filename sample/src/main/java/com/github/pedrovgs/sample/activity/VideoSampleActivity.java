@@ -15,9 +15,12 @@
  */
 package com.github.pedrovgs.sample.activity;
 
+import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.Toast;
 import android.widget.VideoView;
@@ -56,6 +59,8 @@ public class VideoSampleActivity extends FragmentActivity {
    */
   @Override protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    // Hide TitleBar
+    requestWindowFeature(Window.FEATURE_NO_TITLE);
     setContentView(R.layout.activity_video_sample);
     ButterKnife.inject(this);
     initializeVideoView();
@@ -142,5 +147,22 @@ public class VideoSampleActivity extends FragmentActivity {
         .load(VIDEO_THUMBNAIL)
         .placeholder(R.drawable.spiderman_placeholder)
         .into(thumbnailImageView);
+  }
+
+
+  /**
+   * Override method to control ActionBar and StatusBar visibility
+   * If you are using action bar, use getActionBar().hide() method
+   * when window is in landscape mode
+   */
+  @Override public void onConfigurationChanged(final Configuration newConfig) {
+    super.onConfigurationChanged(newConfig);
+
+    if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+      getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
+      getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+    } else {
+      getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+    }
   }
 }

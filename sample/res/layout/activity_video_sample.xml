@@ -35,7 +35,7 @@
 
     <ImageView
         android:id="@+id/iv_thumbnail"
-        android:layout_below="@+id/dragView"
+        android:layout_below="@+id/video_view"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         style="@style/image_view"/>
@@ -44,7 +44,7 @@
 
     <VideoView
         android:id="@+id/video_view"
-        android:layout_height="wrap_content"
+        android:layout_height="@dimen/top_fragment_height"
         android:layout_width="fill_parent"
         android:layout_alignParentTop="true"/>
 

@@ -98,6 +98,21 @@ public abstract class Transformer {
     }
   }
 
+  /**
+   * Change view width using the LayoutParams of the view.
+   *
+   * @param newWidth to change..
+   */
+  public void setViewWidth(int newWidth) {
+    if (newWidth > 0) {
+      originalWidth = newWidth;
+      RelativeLayout.LayoutParams layoutParams =
+          (RelativeLayout.LayoutParams) view.getLayoutParams();
+      layoutParams.width = newWidth;
+      view.setLayoutParams(layoutParams);
+    }
+  }
+
   protected View getView() {
     return view;
   }

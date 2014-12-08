@@ -16,9 +16,11 @@
 package com.github.pedrovgs;
 
 import android.content.Context;
+import android.content.res.Configuration;
 import android.content.res.TypedArray;
 import android.graphics.PointF;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -28,6 +30,8 @@ import android.support.v4.widget.ViewDragHelper;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.RelativeLayout;
 import com.github.pedrovgs.transformer.Transformer;
 import com.github.pedrovgs.transformer.TransformerFactory;
@@ -295,6 +299,51 @@ public class DraggableView extends RelativeLayout {
         event.getY(), event.getMetaState());
   }
 
+
+  @Override
+  protected void onConfigurationChanged(final Configuration newConfig) {
+    if(!transformer.isLandscapeModeSupported())
+      return;
+
+    final boolean isClosed = isClosed();
+
+    getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+      @Override
+      public void onGlobalLayout() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
+          getViewTreeObserver().removeGlobalOnLayoutListener(this);
+        }
+        else {
+          getViewTreeObserver().removeOnGlobalLayoutListener(this);
+        }
+
+        int newHeight = originalViewHeight;
+        float xScaleFactor = scaleFactor.x;
+        float yScaleFactor = scaleFactor.y;
+
+        if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+          newHeight = getResources().getDisplayMetrics().heightPixels;
+          xScaleFactor *= .6f;
+          yScaleFactor *= .6f;
+        }
+
+        transformer.setViewHeight(newHeight);
+        transformer.setViewWidth(getWidth());
+        transformer.setXScaleFactor(xScaleFactor);
+        transformer.setYScaleFactor(yScaleFactor);
+
+        if (getVisibility() == VISIBLE && !isClosed) {
+          if (isMaximized()) {
+            changeDragViewScale(SLIDE_TOP);
+            changeDragViewPosition(SLIDE_TOP);
+          } else {
+            smoothSlideTo(SLIDE_BOTTOM);
+          }
+        }
+      }
+    });
+  }
+
   /**
    * Override method to configure the dragged view and secondView layout properly.
    */
@@ -364,7 +413,11 @@ public class DraggableView extends RelativeLayout {
    * displacement while the view is dragged.
    */
   void changeDragViewPosition() {
-    transformer.updatePosition(getVerticalDragOffset());
+    changeDragViewPosition(getVerticalDragOffset());
+  }
+
+  void changeDragViewPosition(float offset) {
+    transformer.updatePosition(offset);
   }
 
   /**
@@ -378,7 +431,11 @@ public class DraggableView extends RelativeLayout {
    * Modify dragged view scale based on the dragged view vertical position and the scale factor.
    */
   void changeDragViewScale() {
-    transformer.updateScale(getVerticalDragOffset());
+    changeDragViewScale(getVerticalDragOffset());
+  }
+
+  void changeDragViewScale(float offset) {
+    transformer.updateScale(offset);
   }
 
   /**
