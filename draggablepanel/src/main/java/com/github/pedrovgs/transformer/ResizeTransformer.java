@@ -94,6 +94,11 @@ class ResizeTransformer extends Transformer {
     return (getView().getLeft() - getMarginRight()) < getParentView().getWidth() * 0.05;
   }
 
+  @Override
+  public boolean isLandscapeModeSupported() {
+    return true;
+  }
+
   /**
    * Uses the Y scale factor to calculate the min possible height.
    */

@@ -148,6 +148,8 @@ public abstract class Transformer {
 
   public abstract boolean isNextToLeftBound();
 
+  public abstract boolean isLandscapeModeSupported();
+
   /**
    * @return min possible height, after apply the transformation, plus the margin right.
    */

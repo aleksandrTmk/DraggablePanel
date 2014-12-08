@@ -73,6 +73,11 @@ class ScaleTransformer extends Transformer {
     return (getView().getRight() - getMarginRight()) < getParentView().getWidth() * 0.6;
   }
 
+  @Override
+  public boolean isLandscapeModeSupported() {
+    return false;
+  }
+
   /**
    * @return true if the right position of the view is to the right of the one hundred twenty five
    * five percent of the parent view width.
