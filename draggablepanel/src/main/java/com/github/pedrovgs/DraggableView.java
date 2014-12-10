@@ -295,10 +295,9 @@ public class DraggableView extends RelativeLayout {
     else if (isDragViewAtTop()) {
       dragView.layout(left, top, right, (int) transformer.getOriginalHeight());
       secondView.layout(left, (int) transformer.getOriginalHeight(), right, bottom);
+
       ViewHelper.setY(dragView, top);
       ViewHelper.setY(secondView, transformer.getOriginalHeight());
-    } else {
-      secondView.layout(left, transformer.getOriginalHeight(), right, bottom);
     }
   }
 
