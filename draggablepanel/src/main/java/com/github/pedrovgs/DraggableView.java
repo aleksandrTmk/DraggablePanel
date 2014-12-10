@@ -239,7 +239,8 @@ public class DraggableView extends RelativeLayout {
    * @param ev captured.
    * @return true if the view is going to process the touch event or false if not.
    */
-  @Override public boolean onInterceptTouchEvent(MotionEvent ev) {
+  @Override public boolean onInterceptTouchEvent(MotionEvent event) {
+    MotionEvent ev = MotionEvent.obtain(event);
     final int action = MotionEventCompat.getActionMasked(ev);
 
     if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
