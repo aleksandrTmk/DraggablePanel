@@ -112,8 +112,8 @@ public class DraggableView extends RelativeLayout {
    *
    * @param topFragmentHeight in pixels
    */
-  public void setTopViewHeight(int topFragmentHeight) {
-    transformer.setViewHeight(topFragmentHeight);
+  public void setTopViewHeight(float topFragmentHeight) {
+    transformer.setViewHeight((int) topFragmentHeight);
   }
 
   /**
@@ -169,7 +169,7 @@ public class DraggableView extends RelativeLayout {
    * Close the custom view applying an animation to close the view to the right side of the screen.
    */
   public void closeToRight() {
-    if (viewDragHelper.smoothSlideViewTo(dragView, transformer.getOriginalWidth(),
+    if (viewDragHelper.smoothSlideViewTo(dragView, (int) transformer.getOriginalWidth(),
         getHeight() - transformer.getMinHeightPlusMargin())) {
       ViewCompat.postInvalidateOnAnimation(this);
       notifyCloseToRightListener();
@@ -180,7 +180,7 @@ public class DraggableView extends RelativeLayout {
    * Close the custom view applying an animation to close the view to the left side of the screen.
    */
   public void closeToLeft() {
-    if (viewDragHelper.smoothSlideViewTo(dragView, -transformer.getOriginalWidth(),
+    if (viewDragHelper.smoothSlideViewTo(dragView, (int) -transformer.getOriginalWidth(),
         getHeight() - transformer.getMinHeightPlusMargin())) {
       ViewCompat.postInvalidateOnAnimation(this);
       notifyCloseToLeftListener();
@@ -293,8 +293,8 @@ public class DraggableView extends RelativeLayout {
     if (isInEditMode())
       super.onLayout(changed, left, top, right, bottom);
     else if (isDragViewAtTop()) {
-      dragView.layout(left, top, right, transformer.getOriginalHeight());
-      secondView.layout(left, transformer.getOriginalHeight(), right, bottom);
+      dragView.layout(left, top, right, (int) transformer.getOriginalHeight());
+      secondView.layout(left, (int) transformer.getOriginalHeight(), right, bottom);
       ViewHelper.setY(dragView, top);
       ViewHelper.setY(secondView, transformer.getOriginalHeight());
     } else {
@@ -566,14 +566,14 @@ public class DraggableView extends RelativeLayout {
   /**
    * @return configured dragged view margin right configured.
    */
-  private int getDragViewMarginRight() {
+  private float getDragViewMarginRight() {
     return transformer.getMarginRight();
   }
 
   /**
    * @return configured dragged view margin bottom.
    */
-  private int getDragViewMarginBottom() {
+  private float getDragViewMarginBottom() {
     return transformer.getMarginBottom();
   }
 
