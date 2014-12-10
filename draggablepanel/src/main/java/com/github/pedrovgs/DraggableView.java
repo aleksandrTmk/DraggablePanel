@@ -16,8 +16,12 @@
 package com.github.pedrovgs;
 
 import android.content.Context;
+import android.content.res.Configuration;
 import android.content.res.TypedArray;
+import android.graphics.PointF;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.view.MotionEventCompat;
@@ -26,6 +30,7 @@ import android.support.v4.widget.ViewDragHelper;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.RelativeLayout;
 import com.github.pedrovgs.transformer.Transformer;
 import com.github.pedrovgs.transformer.TransformerFactory;
@@ -58,6 +63,8 @@ public class DraggableView extends RelativeLayout {
 
   private boolean enableHorizontalAlphaEffect;
   private boolean topViewResize;
+  private int originalViewHeight;
+  private PointF scaleFactor = new PointF();
 
   private DraggableListener listener;
 
@@ -81,6 +88,7 @@ public class DraggableView extends RelativeLayout {
    */
   public void setXTopViewScaleFactor(float xScaleFactor) {
     transformer.setXScaleFactor(xScaleFactor);
+    scaleFactor.x = xScaleFactor;
   }
 
   /**
@@ -89,6 +97,7 @@ public class DraggableView extends RelativeLayout {
    */
   public void setYTopViewScaleFactor(float yScaleFactor) {
     transformer.setYScaleFactor(yScaleFactor);
+    scaleFactor.y = yScaleFactor;
   }
 
   /**
@@ -114,6 +123,7 @@ public class DraggableView extends RelativeLayout {
    */
   public void setTopViewHeight(int topFragmentHeight) {
     transformer.setViewHeight(topFragmentHeight);
+    originalViewHeight = topFragmentHeight;
   }
 
   /**
@@ -188,6 +198,15 @@ public class DraggableView extends RelativeLayout {
   }
 
   /**
+   * Alternative to View.isShown() but without checking parent
+   *
+   * @return boolean
+   */
+  public boolean isVisible(){
+    return getVisibility() == VISIBLE;
+  }
+
+  /**
    * Checks if the top view is minimized.
    *
    * @return true if the view is minimized.
@@ -236,14 +255,14 @@ public class DraggableView extends RelativeLayout {
    * Override method to intercept only touch events over the drag view and to cancel the drag when
    * the action associated to the MotionEvent is equals to ACTION_CANCEL or ACTION_UP.
    *
-   * @param ev captured.
+   * @param event captured.
    * @return true if the view is going to process the touch event or false if not.
    */
   @Override public boolean onInterceptTouchEvent(MotionEvent event) {
     MotionEvent ev = MotionEvent.obtain(event);
     final int action = MotionEventCompat.getActionMasked(ev);
 
-    if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
+    if (ev.getPointerCount() > 1 || action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
       viewDragHelper.cancel();
       return false;
     }
@@ -257,8 +276,10 @@ public class DraggableView extends RelativeLayout {
    * @param ev captured.
    * @return true if the touch event is realized over the drag or second view.
    */
-  @Override public boolean onTouchEvent(MotionEvent ev) {
-    viewDragHelper.processTouchEvent(ev);
+  @Override public boolean onTouchEvent(@NonNull MotionEvent ev) {
+    if (ev.getPointerCount() < 2) {
+      viewDragHelper.processTouchEvent(ev);
+    }
     if (isClosed()) {
       return false;
     }
@@ -285,6 +306,52 @@ public class DraggableView extends RelativeLayout {
   private MotionEvent cloneMotionEventWithAction(MotionEvent event, int action) {
     return MotionEvent.obtain(event.getDownTime(), event.getEventTime(), action, event.getX(),
         event.getY(), event.getMetaState());
+  }
+
+
+
+  @Override
+  protected void onConfigurationChanged(final Configuration newConfig) {
+    if(!transformer.isLandscapeModeSupported())
+      return;
+
+    final boolean isClosed = isClosed();
+
+    getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+      @Override
+      public void onGlobalLayout() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
+          getViewTreeObserver().removeGlobalOnLayoutListener(this);
+        }
+        else {
+          getViewTreeObserver().removeOnGlobalLayoutListener(this);
+        }
+
+        int newHeight = originalViewHeight;
+        float xScaleFactor = scaleFactor.x;
+        float yScaleFactor = scaleFactor.y;
+
+        if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+          newHeight = getResources().getDisplayMetrics().heightPixels;
+          xScaleFactor *= .6f;
+          yScaleFactor *= .6f;
+        }
+
+        transformer.setViewHeight(newHeight);
+        transformer.setViewWidth(getWidth());
+        transformer.setXScaleFactor(xScaleFactor);
+        transformer.setYScaleFactor(yScaleFactor);
+
+        if (getVisibility() == VISIBLE && !isClosed) {
+          if (isMaximized()) {
+            changeDragViewScale(SLIDE_TOP);
+            changeDragViewPosition(SLIDE_TOP);
+          } else {
+            smoothSlideTo(SLIDE_BOTTOM);
+          }
+        }
+      }
+    });
   }
 
   /**
@@ -357,7 +424,11 @@ public class DraggableView extends RelativeLayout {
    * displacement while the view is dragged.
    */
   void changeDragViewPosition() {
-    transformer.updatePosition(getVerticalDragOffset());
+    changeDragViewPosition(getVerticalDragOffset());
+  }
+
+  void changeDragViewPosition(float offset) {
+    transformer.updatePosition(offset);
   }
 
   /**
@@ -371,7 +442,11 @@ public class DraggableView extends RelativeLayout {
    * Modify dragged view scale based on the dragged view vertical position and the scale factor.
    */
   void changeDragViewScale() {
-    transformer.updateScale(getVerticalDragOffset());
+    changeDragViewScale(getVerticalDragOffset());
+  }
+
+  void changeDragViewScale(float offset) {
+    transformer.updateScale(offset);
   }
 
   /**
@@ -515,16 +590,20 @@ public class DraggableView extends RelativeLayout {
   private void initializeTransformer(TypedArray attributes) {
     topViewResize =
         attributes.getBoolean(R.styleable.draggable_view_top_view_resize, DEFAULT_TOP_VIEW_RESIZE);
+    scaleFactor.x =
+        attributes.getFloat(R.styleable.draggable_view_top_view_x_scale_factor, DEFAULT_SCALE_FACTOR);
+    scaleFactor.y =
+        attributes.getFloat(R.styleable.draggable_view_top_view_y_scale_factor, DEFAULT_SCALE_FACTOR);
+    originalViewHeight =
+        attributes.getDimensionPixelSize(R.styleable.draggable_view_top_view_height, DEFAULT_TOP_VIEW_HEIGHT);
+    if (originalViewHeight == DEFAULT_TOP_VIEW_HEIGHT)
+      originalViewHeight = dragView.getLayoutParams().height;
+
     TransformerFactory transformerFactory = new TransformerFactory();
     transformer = transformerFactory.getTransformer(topViewResize, dragView, this);
-    transformer.setViewHeight(attributes.getDimensionPixelSize(R.styleable.draggable_view_top_view_height,
-        DEFAULT_TOP_VIEW_HEIGHT));
-    transformer.setXScaleFactor(
-        attributes.getFloat(R.styleable.draggable_view_top_view_x_scale_factor,
-            DEFAULT_SCALE_FACTOR));
-    transformer.setYScaleFactor(
-        attributes.getFloat(R.styleable.draggable_view_top_view_y_scale_factor,
-            DEFAULT_SCALE_FACTOR));
+    transformer.setViewHeight(originalViewHeight);
+    transformer.setXScaleFactor(scaleFactor.x);
+    transformer.setYScaleFactor(scaleFactor.y);
     transformer.setMarginRight(
         attributes.getDimensionPixelSize(R.styleable.draggable_view_top_view_margin_right,
             DEFAULT_TOP_VIEW_MARGIN));
@@ -603,6 +682,19 @@ public class DraggableView extends RelativeLayout {
    */
   private float getVerticalDragRange() {
     return getHeight() - transformer.getMinHeightPlusMargin();
+  }
+
+
+  protected Transformer getTransformer(){
+    return transformer;
+  }
+
+  protected View getDragView() {
+    return dragView;
+  }
+
+  protected View getSecondView() {
+    return secondView;
   }
 
   /**

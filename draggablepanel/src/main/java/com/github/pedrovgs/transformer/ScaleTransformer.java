@@ -81,6 +81,10 @@ class ScaleTransformer extends Transformer {
     return (getView().getRight() - getMarginRight()) > getParentView().getWidth() * 1.25;
   }
 
+  @Override public boolean isLandscapeModeSupported(){
+    return false;
+  }
+
   /**
    * @return min view height taking into account the configured margin.
    */

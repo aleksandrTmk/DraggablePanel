@@ -98,6 +98,21 @@ public abstract class Transformer {
     }
   }
 
+  /**
+   * Change view width using the LayoutParams of the view.
+   *
+   * @param newWidth to change..
+   */
+  public void setViewWidth(int newWidth) {
+    if (newWidth > 0) {
+      originalWidth = newWidth;
+      RelativeLayout.LayoutParams layoutParams =
+          (RelativeLayout.LayoutParams) view.getLayoutParams();
+      layoutParams.width = newWidth;
+      view.setLayoutParams(layoutParams);
+    }
+  }
+
   protected View getView() {
     return view;
   }
@@ -147,6 +162,8 @@ public abstract class Transformer {
   public abstract boolean isNextToRightBound();
 
   public abstract boolean isNextToLeftBound();
+
+  public abstract boolean isLandscapeModeSupported();
 
   /**
    * @return min possible height, after apply the transformation, plus the margin right.
