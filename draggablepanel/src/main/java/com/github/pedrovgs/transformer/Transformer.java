@@ -34,17 +34,17 @@ import com.nineoldandroids.view.ViewHelper;
  */
 public abstract class Transformer {
 
-  private final View view;
-  private final View parent;
+  protected final View view;
+  protected final View parent;
 
-  private int marginRight;
-  private int marginBottom;
+  protected int marginRight;
+  protected int marginBottom;
 
-  private float xScaleFactor;
-  private float yScaleFactor;
+  protected float xScaleFactor;
+  protected float yScaleFactor;
 
-  private int originalHeight;
-  private int originalWidth;
+  protected int originalHeight;
+  protected int originalWidth;
 
   public Transformer(View view, View parent) {
     this.view = view;

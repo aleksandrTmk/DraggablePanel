@@ -162,6 +162,7 @@ public class DraggableView extends RelativeLayout {
    * Maximize the custom view applying an animation to return the view to the initial position.
    */
   public void maximize() {
+    setVisibility(VISIBLE);
     smoothSlideTo(SLIDE_TOP);
     notifyMaximizeToListener();
   }
@@ -255,11 +256,10 @@ public class DraggableView extends RelativeLayout {
    * Override method to intercept only touch events over the drag view and to cancel the drag when
    * the action associated to the MotionEvent is equals to ACTION_CANCEL or ACTION_UP.
    *
-   * @param event captured.
+   * @param ev captured.
    * @return true if the view is going to process the touch event or false if not.
    */
-  @Override public boolean onInterceptTouchEvent(MotionEvent event) {
-    MotionEvent ev = MotionEvent.obtain(event);
+  @Override public boolean onInterceptTouchEvent(MotionEvent ev) {
     final int action = MotionEventCompat.getActionMasked(ev);
 
     if (ev.getPointerCount() > 1 || action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
@@ -267,7 +267,12 @@ public class DraggableView extends RelativeLayout {
       return false;
     }
     boolean interceptTap = viewDragHelper.isViewUnder(dragView, (int) ev.getX(), (int) ev.getY());
-    return viewDragHelper.shouldInterceptTouchEvent(ev) || interceptTap;
+
+    try {
+      return viewDragHelper.shouldInterceptTouchEvent(ev) || interceptTap;
+    } catch (NullPointerException ignore){
+      return false;
+    }
   }
 
   /**
@@ -278,7 +283,9 @@ public class DraggableView extends RelativeLayout {
    */
   @Override public boolean onTouchEvent(@NonNull MotionEvent ev) {
     if (ev.getPointerCount() < 2) {
-      viewDragHelper.processTouchEvent(ev);
+      try {
+        viewDragHelper.processTouchEvent(ev);
+      } catch(IllegalArgumentException | ArrayIndexOutOfBoundsException ignore) {}
     }
     if (isClosed()) {
       return false;
@@ -333,8 +340,8 @@ public class DraggableView extends RelativeLayout {
 
         if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
           newHeight = getResources().getDisplayMetrics().heightPixels;
-          xScaleFactor *= .6f;
-          yScaleFactor *= .6f;
+          xScaleFactor *= .75f;
+          yScaleFactor *= .75f;
         }
 
         transformer.setViewHeight(newHeight);

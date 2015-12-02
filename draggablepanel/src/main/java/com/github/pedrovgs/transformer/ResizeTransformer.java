@@ -42,7 +42,8 @@ class ResizeTransformer extends Transformer {
     layoutParams.width = (int) (getOriginalWidth() * (1 - verticalDragOffset / getXScaleFactor()));
     layoutParams.height = (int) (getOriginalHeight() * (1 - verticalDragOffset / getYScaleFactor()));
 
-    getView().setLayoutParams(layoutParams);
+    //getView().setLayoutParams(layoutParams);
+    getView().requestLayout();
   }
 
 
@@ -59,6 +60,13 @@ class ResizeTransformer extends Transformer {
     int bottom = top + layoutParams.height;
 
     getView().layout(left, top, right, bottom);
+  }
+
+  public boolean isAboveTheMiddle() {
+    int parentHeight = parent.getHeight();
+    float viewYPosition = view.getTop();
+    //System.out.println("H: "+parentHeight + "  vY:"+ view.getTop() + "  vH:"+view.getHeight());
+    return viewYPosition < (parentHeight * 0.5);
   }
 
 
