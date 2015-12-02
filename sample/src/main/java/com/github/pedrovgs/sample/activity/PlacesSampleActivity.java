@@ -15,11 +15,16 @@
  */
 package com.github.pedrovgs.sample.activity;
 
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.v4.app.ActionBarDrawerToggle;
+import android.support.v4.widget.DrawerLayout;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.ImageView;
 import android.widget.ListView;
 import butterknife.ButterKnife;
 import butterknife.InjectView;
@@ -33,7 +38,9 @@ import com.google.android.gms.maps.GoogleMapOptions;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.nineoldandroids.view.ViewHelper;
 import com.pedrogomez.renderers.RendererAdapter;
+import com.squareup.picasso.Picasso;
 import javax.inject.Inject;
 
 /**
@@ -51,6 +58,8 @@ public class PlacesSampleActivity extends DIFragmentActivity {
 
   @InjectView(R.id.lv_places) ListView placesListView;
   @InjectView(R.id.draggable_panel) DraggablePanel draggablePanel;
+  @InjectView(R.id.drawer_left) DrawerLayout drawerlayoutLeft;
+  @InjectView(R.id.iv_drawer) ImageView drawerImageView;
 
   @Inject RendererAdapter<PlaceViewModel> placesAdapter;
 
@@ -58,6 +67,8 @@ public class PlacesSampleActivity extends DIFragmentActivity {
   private SupportMapFragment mapFragment;
 
   private int lastLoadedPlacePosition;
+
+  private ActionBarDrawerToggle drawerToggle;
 
   /**
    * Initialize the Activity with some injected data.
@@ -69,6 +80,20 @@ public class PlacesSampleActivity extends DIFragmentActivity {
     initializeFragments();
     initializeListView();
     initializeDraggablePanel();
+    configNavigationDrawer();
+  }
+
+  /**
+   * Sync the drawerToggle
+   */
+  @Override protected void onPostCreate(Bundle savedInstanceState) {
+    super.onPostCreate(savedInstanceState);
+    drawerToggle.syncState();
+  }
+
+  @Override public void onConfigurationChanged(Configuration newConfig) {
+    super.onConfigurationChanged(newConfig);
+    drawerToggle.onConfigurationChanged(newConfig);
   }
 
   /**
@@ -198,6 +223,10 @@ public class PlacesSampleActivity extends DIFragmentActivity {
     placeFragment = new PlaceFragment();
     mapFragment = SupportMapFragment.newInstance(
         new GoogleMapOptions().mapType(GoogleMap.MAP_TYPE_SATELLITE));
+    Picasso.with(this)
+        .load("http://www.hdiphonewallpapers.us/phone-wallpapers/iphone-4-wallpapers/"
+            + "hd-iphone-3gs-wallpapers-496ios.jpg")
+        .into(drawerImageView);
   }
 
   /**
@@ -206,8 +235,8 @@ public class PlacesSampleActivity extends DIFragmentActivity {
   private void initializeListView() {
     placesListView.setAdapter(placesAdapter);
     placesListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-      @Override public void onItemClick(AdapterView<?> adapterView, View view, int position,
-          long id) {
+      @Override
+      public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
         lastLoadedPlacePosition = position;
         showPlace(position);
       }
@@ -249,12 +278,38 @@ public class PlacesSampleActivity extends DIFragmentActivity {
     float yScaleFactor = typedValue.getFloat();
     draggablePanel.setXScaleFactor(xScaleFactor);
     draggablePanel.setYScaleFactor(yScaleFactor);
-    draggablePanel.setTopViewHeight(getResources().getDimensionPixelSize(R.dimen.top_fragment_height));
+    draggablePanel.setTopViewHeight(
+        getResources().getDimensionPixelSize(R.dimen.top_fragment_height));
     draggablePanel.setTopFragmentMarginRight(
         getResources().getDimensionPixelSize(R.dimen.top_fragment_margin));
     draggablePanel.setTopFragmentMarginBottom(
         getResources().getDimensionPixelSize(R.dimen.top_fragment_margin));
     draggablePanel.initializeView();
     draggablePanel.setVisibility(View.GONE);
+  }
+
+  private void configNavigationDrawer() {
+    getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+    getSupportActionBar().setHomeButtonEnabled(true);
+    drawerlayoutLeft.setDrawerShadow(R.drawable.drawer_shadow, Gravity.LEFT);
+    drawerToggle =
+        new ActionBarDrawerToggle(this, drawerlayoutLeft, R.drawable.nav_drawer, R.string.app_name,
+            R.string.app_name) {
+
+          @Override public void onDrawerOpened(View drawerView) {
+            super.onDrawerOpened(drawerView);
+          }
+
+          @Override public void onDrawerClosed(View drawerView) {
+            super.onDrawerClosed(drawerView);
+          }
+
+          @Override public void onDrawerSlide(View drawerView, float slideOffset) {
+            super.onDrawerSlide(drawerView, slideOffset);
+            draggablePanel.slideHorizontally(slideOffset, ViewHelper.getX(drawerView),
+                drawerView.getWidth());
+          }
+        };
+    drawerlayoutLeft.setDrawerListener(drawerToggle);
   }
 }

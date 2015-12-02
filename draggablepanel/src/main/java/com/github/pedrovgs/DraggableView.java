@@ -48,14 +48,22 @@ public class DraggableView extends RelativeLayout {
   private static final int DEFAULT_TOP_VIEW_HEIGHT = -1;
   private static final float SLIDE_TOP = 0f;
   private static final float SLIDE_BOTTOM = 1f;
+  private static final float MIN_SLIDE_OFFSET = 0.1f;
   private static final boolean DEFAULT_ENABLE_HORIZONTAL_ALPHA_EFFECT = true;
+  private static final boolean DEFAULT_ENABLE_CLICK_TO_MAXIMIZE = false;
+  private static final boolean DEFAULT_ENABLE_CLICK_TO_MINIMIZE = false;
+  private static final boolean DEFAULT_ENABLE_TOUCH_LISTENER = true;
+  private static final int MIN_SLIDING_DISTANCE_ON_CLICK = 10;
   private static final int ONE_HUNDRED = 100;
   private static final float SENSITIVITY = 1f;
   private static final boolean DEFAULT_TOP_VIEW_RESIZE = false;
+  private static final int INVALID_POINTER = -1;
+
+  private int activePointerId = INVALID_POINTER;
+  private float lastTouchActionDownXPosition;
 
   private View dragView;
   private View secondView;
-  private TypedArray attributes;
 
   private FragmentManager fragmentManager;
   private ViewDragHelper viewDragHelper;
@@ -63,10 +71,15 @@ public class DraggableView extends RelativeLayout {
 
   private boolean enableHorizontalAlphaEffect;
   private boolean topViewResize;
-  private int originalViewHeight;
-  private PointF scaleFactor = new PointF();
+  private boolean enableClickToMaximize;
+  private boolean enableClickToMinimize;
+  private boolean touchEnabled;
 
   private DraggableListener listener;
+  private int topViewHeight;
+  private float scaleFactorX, scaleFactorY;
+  private int marginBottom, marginRight;
+  private int dragViewId, secondViewId;
 
   public DraggableView(Context context) {
     super(context);
@@ -80,6 +93,80 @@ public class DraggableView extends RelativeLayout {
   public DraggableView(Context context, AttributeSet attrs, int defStyle) {
     super(context, attrs, defStyle);
     initializeAttributes(attrs);
+  }
+
+  /**
+   * Return if user can maximize minimized view on click.
+   */
+  public boolean isClickToMaximizeEnabled() {
+    return enableClickToMaximize;
+  }
+
+  /**
+   * Enable or disable click to maximize view when dragged view is minimized
+   * If your content have a touch/click listener (like YoutubePlayer), you
+   * need disable it to active this feature.
+   *
+   * @param enableClickToMaximize to enable or disable the click.
+   */
+  public void setClickToMaximizeEnabled(boolean enableClickToMaximize) {
+    this.enableClickToMaximize = enableClickToMaximize;
+  }
+
+  /**
+   * Return if user can minimize maximized view on click.
+   */
+  public boolean isClickToMinimizeEnabled() {
+    return enableClickToMinimize;
+  }
+
+  /**
+   * Enable or disable click to minimize view when dragged view is maximized
+   * If your content have a touch/click listener (like YoutubePlayer), you
+   * need disable it to active this feature.
+   *
+   * @param enableClickToMinimize to enable or disable the click.
+   */
+  public void setClickToMinimizeEnabled(boolean enableClickToMinimize) {
+    this.enableClickToMinimize = enableClickToMinimize;
+  }
+
+  /**
+   * Return if touch listener is enable or disable
+   */
+  private boolean isTouchEnabled() {
+    return this.touchEnabled;
+  }
+
+  /**
+   * Enable or disable the touch listener
+   *
+   * @param touchEnabled to enable or disable the touch event.
+   */
+  public void setTouchEnabled(boolean touchEnabled) {
+    this.touchEnabled = touchEnabled;
+  }
+
+  /**
+   * Slide the view based on scroll of the nav drawer.
+   * "setEnableTouch" user prevents click to expand while the drawer is moving, it will be
+   * set to false when the @slideOffset is bigger than MIN_SLIDE_OFFSET.
+   * When the slideOffset is bigger than 0.1 and dragView isn't close, set the dragView
+   * to minimized.
+   * It's only possible to maximize the view when @slideOffset is equals to 0.0,
+   * in other words, closed.
+   *
+   * @param slideOffset Value between 0 and 1, represent the value of slide:
+   * 0.0 is equal to close drawer and 1.0 equals open drawer.
+   * @param drawerPosition Represent the position of nav drawer on X axis.
+   * @param width Width of nav drawer
+   */
+  public void slideHorizontally(float slideOffset, float drawerPosition, int width) {
+    if (slideOffset > MIN_SLIDE_OFFSET && !isClosed() && isMaximized()) {
+      minimize();
+    }
+    setTouchEnabled(slideOffset <= MIN_SLIDE_OFFSET);
+    ViewHelper.setX(this, width - Math.abs(drawerPosition));
   }
 
   /**
@@ -146,6 +233,7 @@ public class DraggableView extends RelativeLayout {
    */
   public void setTopViewResize(boolean topViewResize) {
     this.topViewResize = topViewResize;
+    initializeTransformer();
   }
 
   /**
@@ -260,11 +348,23 @@ public class DraggableView extends RelativeLayout {
    * @return true if the view is going to process the touch event or false if not.
    */
   @Override public boolean onInterceptTouchEvent(MotionEvent ev) {
-    final int action = MotionEventCompat.getActionMasked(ev);
-
-    if (ev.getPointerCount() > 1 || action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
-      viewDragHelper.cancel();
+    if (!isEnabled()) {
       return false;
+    }
+    switch (MotionEventCompat.getActionMasked(ev) & MotionEventCompat.ACTION_MASK) {
+      case MotionEvent.ACTION_CANCEL:
+      case MotionEvent.ACTION_UP:
+        viewDragHelper.cancel();
+        return false;
+      case MotionEvent.ACTION_DOWN:
+        int index = MotionEventCompat.getActionIndex(ev);
+        activePointerId = MotionEventCompat.getPointerId(ev, index);
+        if (activePointerId == INVALID_POINTER) {
+          return false;
+        }
+        break;
+      default:
+        break;
     }
     boolean interceptTap = viewDragHelper.isViewUnder(dragView, (int) ev.getX(), (int) ev.getY());
 
@@ -281,17 +381,22 @@ public class DraggableView extends RelativeLayout {
    * @param ev captured.
    * @return true if the touch event is realized over the drag or second view.
    */
-  @Override public boolean onTouchEvent(@NonNull MotionEvent ev) {
-    if (ev.getPointerCount() < 2) {
-      try {
-        viewDragHelper.processTouchEvent(ev);
-      } catch(IllegalArgumentException | ArrayIndexOutOfBoundsException ignore) {}
+  @Override public boolean onTouchEvent(MotionEvent ev) {
+    int actionMasked = MotionEventCompat.getActionMasked(ev);
+    if ((actionMasked & MotionEventCompat.ACTION_MASK) == MotionEvent.ACTION_DOWN) {
+      activePointerId = MotionEventCompat.getPointerId(ev, actionMasked);
     }
+    if (activePointerId == INVALID_POINTER) {
+      return false;
+    }
+    viewDragHelper.processTouchEvent(ev);
+
     if (isClosed()) {
       return false;
     }
     boolean isDragViewHit = isViewHit(dragView, (int) ev.getX(), (int) ev.getY());
     boolean isSecondViewHit = isViewHit(secondView, (int) ev.getX(), (int) ev.getY());
+    analyzeTouchToMaximizeIfNeeded(ev, isDragViewHit);
     if (isMaximized()) {
       dragView.dispatchTouchEvent(ev);
     } else {
@@ -300,10 +405,36 @@ public class DraggableView extends RelativeLayout {
     return isDragViewHit || isSecondViewHit;
   }
 
+  private void analyzeTouchToMaximizeIfNeeded(MotionEvent ev, boolean isDragViewHit) {
+    switch(ev.getAction()) {
+      case MotionEvent.ACTION_DOWN:
+        lastTouchActionDownXPosition = ev.getX();
+        break;
+      case MotionEvent.ACTION_UP:
+        float clickOffset = ev.getX() - lastTouchActionDownXPosition;
+        if (shouldMaximizeOnClick(ev, clickOffset, isDragViewHit)) {
+          if (isMinimized() && isClickToMaximizeEnabled()) {
+            maximize();
+          } else if (isMaximized() && isClickToMinimizeEnabled()) {
+            minimize();
+          }
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  public boolean shouldMaximizeOnClick(MotionEvent ev, float deltaX, boolean isDragViewHit) {
+    return (Math.abs(deltaX) < MIN_SLIDING_DISTANCE_ON_CLICK)
+        && ev.getAction() != MotionEvent.ACTION_MOVE
+        && isDragViewHit;
+  }
+
   /**
    * Clone given motion event and set specified action. This method is useful, when we want to
    * cancel event propagation in child views by sending event with {@link
-   * MotionEvent#ACTION_CANCEL}
+   * android.view.MotionEvent#ACTION_CANCEL}
    * action.
    *
    * @param event event to clone
@@ -384,18 +515,13 @@ public class DraggableView extends RelativeLayout {
   @Override protected void onFinishInflate() {
     super.onFinishInflate();
     if (!isInEditMode()) {
-      mapGUI(attributes);
-      initializeTransformer(attributes);
-      attributes.recycle();
+      mapGUI();
+      initializeTransformer();
       initializeViewDragHelper();
     }
   }
 
-  private void mapGUI(TypedArray attributes) {
-    int dragViewId =
-        attributes.getResourceId(R.styleable.draggable_view_top_view_id, R.id.drag_view);
-    int secondViewId =
-        attributes.getResourceId(R.styleable.draggable_view_bottom_view_id, R.id.second_view);
+  private void mapGUI() {
     dragView = findViewById(dragViewId);
     secondView = findViewById(secondViewId);
   }
@@ -587,36 +713,20 @@ public class DraggableView extends RelativeLayout {
    * Initialize the viewDragHelper.
    */
   private void initializeViewDragHelper() {
-    viewDragHelper =
-        ViewDragHelper.create(this, SENSITIVITY, new DraggableViewCallback(this, dragView));
+    viewDragHelper = ViewDragHelper.create(this, SENSITIVITY, new DraggableViewCallback(this, dragView));
   }
 
   /**
    * Initialize Transformer with a scalable or change width/height implementation.
    */
-  private void initializeTransformer(TypedArray attributes) {
-    topViewResize =
-        attributes.getBoolean(R.styleable.draggable_view_top_view_resize, DEFAULT_TOP_VIEW_RESIZE);
-    scaleFactor.x =
-        attributes.getFloat(R.styleable.draggable_view_top_view_x_scale_factor, DEFAULT_SCALE_FACTOR);
-    scaleFactor.y =
-        attributes.getFloat(R.styleable.draggable_view_top_view_y_scale_factor, DEFAULT_SCALE_FACTOR);
-    originalViewHeight =
-        attributes.getDimensionPixelSize(R.styleable.draggable_view_top_view_height, DEFAULT_TOP_VIEW_HEIGHT);
-    if (originalViewHeight == DEFAULT_TOP_VIEW_HEIGHT)
-      originalViewHeight = dragView.getLayoutParams().height;
-
+  private void initializeTransformer() {
     TransformerFactory transformerFactory = new TransformerFactory();
     transformer = transformerFactory.getTransformer(topViewResize, dragView, this);
-    transformer.setViewHeight(originalViewHeight);
-    transformer.setXScaleFactor(scaleFactor.x);
-    transformer.setYScaleFactor(scaleFactor.y);
-    transformer.setMarginRight(
-        attributes.getDimensionPixelSize(R.styleable.draggable_view_top_view_margin_right,
-            DEFAULT_TOP_VIEW_MARGIN));
-    transformer.setMarginBottom(
-        attributes.getDimensionPixelSize(R.styleable.draggable_view_top_view_margin_bottom,
-            DEFAULT_TOP_VIEW_MARGIN));
+    transformer.setViewHeight(topViewHeight);
+    transformer.setXScaleFactor(scaleFactorX);
+    transformer.setYScaleFactor(scaleFactorY);
+    transformer.setMarginRight(marginRight);
+    transformer.setMarginBottom(marginBottom);
   }
 
   /**
@@ -629,7 +739,29 @@ public class DraggableView extends RelativeLayout {
     this.enableHorizontalAlphaEffect =
         attributes.getBoolean(R.styleable.draggable_view_enable_minimized_horizontal_alpha_effect,
             DEFAULT_ENABLE_HORIZONTAL_ALPHA_EFFECT);
-    this.attributes = attributes;
+    this.enableClickToMaximize =
+        attributes.getBoolean(R.styleable.draggable_view_enable_click_to_maximize_view,
+            DEFAULT_ENABLE_CLICK_TO_MAXIMIZE);
+    this.enableClickToMinimize =
+        attributes.getBoolean(R.styleable.draggable_view_enable_click_to_minimize_view,
+            DEFAULT_ENABLE_CLICK_TO_MINIMIZE);
+    this.topViewResize =
+            attributes.getBoolean(R.styleable.draggable_view_top_view_resize, DEFAULT_TOP_VIEW_RESIZE);
+    this.topViewHeight = attributes.getDimensionPixelSize(R.styleable.draggable_view_top_view_height,
+            DEFAULT_TOP_VIEW_HEIGHT);
+    this.scaleFactorX = attributes.getFloat(R.styleable.draggable_view_top_view_x_scale_factor,
+            DEFAULT_SCALE_FACTOR);
+    this.scaleFactorY = attributes.getFloat(R.styleable.draggable_view_top_view_y_scale_factor,
+            DEFAULT_SCALE_FACTOR);
+    this.marginBottom = attributes.getDimensionPixelSize(R.styleable.draggable_view_top_view_margin_bottom,
+            DEFAULT_TOP_VIEW_MARGIN);
+    this.marginRight = attributes.getDimensionPixelSize(R.styleable.draggable_view_top_view_margin_right,
+            DEFAULT_TOP_VIEW_MARGIN);
+    this.dragViewId =
+            attributes.getResourceId(R.styleable.draggable_view_top_view_id, R.id.drag_view);
+    this.secondViewId =
+            attributes.getResourceId(R.styleable.draggable_view_bottom_view_id, R.id.second_view);
+    attributes.recycle();
   }
 
   /**
