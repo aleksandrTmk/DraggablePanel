@@ -344,9 +344,9 @@ public class DraggableView extends RelativeLayout {
     final int action = MotionEventCompat.getActionMasked(ev);
 
     // TODO verify this is the intention
-    if (ev.getPointerCount() > 1 || action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
-      viewDragHelper.cancel();
-    }
+//    if (ev.getPointerCount() > 1 || action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
+//      viewDragHelper.cancel();
+//    }
     if (!isEnabled()) {
 
       return false;
