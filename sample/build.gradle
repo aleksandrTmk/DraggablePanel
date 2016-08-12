@@ -14,6 +14,9 @@ dependencies {
   compile files('libs/YouTubeAndroidPlayerApi.jar')
 }
 
+// Disable JavaDoc generation, its failing and JitPack complains
+tasks.findByPath(":draggablepanel:androidJavadocs").enabled = false
+
 android {
   packagingOptions {
     exclude 'META-INF/services/javax.annotation.processing.Processor'
