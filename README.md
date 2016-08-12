@@ -1,4 +1,4 @@
-Draggable Panel [![Build Status](https://travis-ci.org/pedrovgs/DraggablePanel.svg?branch=develop)](https://travis-ci.org/pedrovgs/DraggablePanel)
+Draggable Panel [![Build Status](https://travis-ci.org/pedrovgs/DraggablePanel.svg?branch=develop)](https://travis-ci.org/pedrovgs/DraggablePanel)  [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.pedrovgs/draggablepanel/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.pedrovgs/draggablepanel) [![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-DraggablePanel-brightgreen.svg?style=flat)](https://android-arsenal.com/details/1/244)
 ===============
 
 
@@ -10,11 +10,7 @@ This new component has been created using some concepts described on [Flavien La
 
 To create this library I've used an Android component called [ViewDragHelper][3] and [ViewDragHelper.Calback][4]. This component doesn't have too much documentation and that's the reason why I've added some javadoc to my code in order to clarify the component usage.
 
-This library works on Android 4.X because the scale effect is not going to work properly when the user try to drag the view. The clickable zone on a scaled view in Android 2.X is bigger than the real scaled zone.
-
-<a href="https://play.google.com/store/apps/details?id=com.github.pedrovgs.sample">
-  <img alt="Android app on Google Play" src="https://developer.android.com/images/brand/en_app_rgb_wo_45.png" />
-</a>
+This library works on Android 4.X or higher versions but not in lower versions because the scale effect is not going to work properly when the user try to drag the view. The clickable zone on a scaled view in Android 2.X is bigger than the real scaled zone.
 
 Screenshots
 -----------
@@ -86,10 +82,12 @@ private void initializeDraggablePanel() throws Resources.NotFoundException {
 </com.github.pedrovgs.DraggableView>
 ```
 
+**If you are going to use ``DraggablePanel`` or ``DraggableView`` combined with a ``DrawerLayout`` review [Famous Places Sample Activity](https://github.com/pedrovgs/DraggablePanel/blob/develop/sample/src/main/java/com/github/pedrovgs/sample/activity/PlacesSampleActivity.java)
+
 Import DraggablePanel dependency
 --------------------------------
 
-Download the project, compile it using maven or gradle and import ``draggablepanel-1.3.aar`` into your project.
+Download the project, compile it using maven or gradle and import ``draggablepanel-1.9.aar`` into your project.
 
 Or declare it into your pom.xml. This library uses NineOldAndroid library and Android support library v4 version 19.1.0, you have to provide this dependencies from your local artifact repository or from maven central repository.
 
@@ -97,7 +95,7 @@ Or declare it into your pom.xml. This library uses NineOldAndroid library and An
 <dependency>
   <groupId>com.github.pedrovgs</groupId>
   <artifactId>draggablepanel</artifactId>
-  <version>1.3</version>
+  <version>1.9</version>
   <type>aar</type>
 </dependency>
 ```
@@ -107,9 +105,7 @@ Or into your build.gradle
 
 ```groovy
 dependencies {
-    compile 'com.github.pedrovgs:draggablepanel:1.3@aar'
-    compile 'com.android.support:support-v4:19.1.+'
-    compile 'com.nineoldandroids:library:2.4.+'
+    compile 'com.github.pedrovgs:draggablepanel:1.9'
 }
 ```
 
@@ -125,6 +121,7 @@ You can customize some of the view effects programatically or using xml styleabl
 * Draggable view margin right applied when the view is minimized.
 * Draggable view margin bottom applied when the view is minimized.
 * Enable or disable the horizontal alpha effect applied while the view is being horizontally dragged.
+* Enable or disable touch on minimized/maximized view to minimize/maximize.
 
 ```xml
 <com.github.pedrovgs.DraggableView
@@ -139,6 +136,8 @@ You can customize some of the view effects programatically or using xml styleabl
         draggable_view:top_view_y_scale_factor="@dimen/y_scale_factor"
         draggable_view:top_view_margin_right="@dimen/top_fragment_margin"
         draggable_view:top_view_margin_bottom="@dimen/top_fragment_margin"
+        draggable_view:enable_click_to_maximize_view="false"
+        draggable_view:enable_click_to_minimize_view="true"
         android:background="@color/black">
 
         <!-- ....... -->
@@ -154,6 +153,8 @@ draggablePanel.setYScaleFactor(yScaleFactor);
 draggablePanel.setTopViewHeight(topViewHeight);
 draggablePanel.setTopFragmentMarginRight(topViewMarginRight);
 draggablePanel.setTopFragmentMarginBottom(topViewMargnBottom);
+draggablePanel.setClickToMaximizeEnabled(enableClickToMaximize);
+draggablePanel.setClickToMinimizeEnabled(enableClickToMinimize);
 ```
 
 Similar customizable attributes are available programatically or using styleable attributes in ``DraggableView``.
@@ -174,32 +175,17 @@ Do you want to contribute? TODO
 
 * Support landscape mode when DraggableView is using ResizeTransformer.
 
-Contributors
-------------
-
-* [Pedro Vicente Gómez Sánchez][20]
-* [Frieder Bluemle][21]
-* [Goldos] [22]
-* [Rafał Pluta][23]
-
-
 Developed By
 ------------
 
 * Pedro Vicente Gómez Sánchez - <pedrovicente.gomez@gmail.com>
 
 <a href="https://twitter.com/pedro_g_s">
-  <img alt="Follow me on Twitter" src="http://imageshack.us/a/img812/3923/smallth.png" />
+  <img alt="Follow me on Twitter" src="https://image.freepik.com/iconos-gratis/twitter-logo_318-40209.jpg" height="60" width="60"/>
 </a>
-<a href="http://www.linkedin.com/in/pedrovg">
-  <img alt="Add me to Linkedin" src="http://imageshack.us/a/img41/7877/smallld.png" />
+<a href="https://es.linkedin.com/in/pedrovgs">
+  <img alt="Add me to Linkedin" src="https://image.freepik.com/iconos-gratis/boton-del-logotipo-linkedin_318-84979.png" height="60" width="60"/>
 </a>
-
-Who's using it
---------------
-
-* [El Rubius Vídeos][9] using the first beta release.
-* [DudePerfect Vídeos] [18] using the first beta release.
 
 *Does your app use DraggablePanel? If you want to be featured on this list tell me on [Twitter][10]
 
@@ -241,7 +227,6 @@ License
 [6]: ./art/screenshot2.gif
 [7]: ./art/screenshot3.gif
 [8]: ./art/screenshot4.gif
-[9]: https://play.google.com/store/apps/details?id=com.nero.elrubiusomg
 [10]: https://twitter.com/pedro_g_s
 [11]: https://github.com/pedrovgs/Renderers
 [12]: https://github.com/square/dagger
@@ -250,9 +235,3 @@ License
 [15]: https://github.com/square/picasso
 [16]: http://actionbarsherlock.com/
 [17]: https://developers.google.com/youtube/android/player/
-[18]: https://play.google.com/store/apps/details?id=com.nero.dudeperfect
-[20]: https://github.com/pedrovgs/
-[21]: https://github.com/friederbluemle/
-[22]: https://github.com/glodos/
-[23]: https://github.com/Fiddl3/
-

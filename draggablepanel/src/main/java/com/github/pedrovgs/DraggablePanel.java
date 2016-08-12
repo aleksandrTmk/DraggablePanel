@@ -38,6 +38,9 @@ public class DraggablePanel extends FrameLayout {
   private static final int DEFAULT_TOP_FRAGMENT_MARGIN = 0;
   private static final float DEFAULT_SCALE_FACTOR = 2;
   private static final boolean DEFAULT_ENABLE_HORIZONTAL_ALPHA_EFFECT = true;
+  private static final boolean DEFAULT_ENABLE_CLICK_TO_MAXIMIZE = false;
+  private static final boolean DEFAULT_ENABLE_CLICK_TO_MINIMIZE = false;
+  private static final boolean DEFAULT_ENABLE_TOUCH_LISTENER = true;
   private static final boolean DEFAULT_TOP_FRAGMENT_RESIZE = false;
 
   private DraggableView draggableView;
@@ -52,6 +55,9 @@ public class DraggablePanel extends FrameLayout {
   private float xScaleFactor;
   private float yScaleFactor;
   private boolean enableHorizontalAlphaEffect;
+  private boolean enableClickToMaximize;
+  private boolean enableClickToMinimize;
+  private boolean enableTouchListener;
 
   public DraggablePanel(Context context) {
     super(context);
@@ -101,6 +107,58 @@ public class DraggablePanel extends FrameLayout {
    */
   public void setTopViewHeight(int topFragmentHeight) {
     this.topFragmentHeight = topFragmentHeight;
+  }
+
+  /**
+   * Return if user can maximize minimized view on click.
+   */
+  public boolean isClickToMaximizeEnabled() {
+    return enableClickToMaximize;
+  }
+
+  /**
+   * Enable or disable click to maximize view when dragged view is minimized
+   * If your content have a touch/click listener (like YoutubePlayer), you
+   * need disable it to active this feature.
+   *
+   * @param enableClickToMaximize to enable or disable the click.
+   */
+  public void setClickToMaximizeEnabled(boolean enableClickToMaximize) {
+    this.enableClickToMaximize = enableClickToMaximize;
+  }
+
+  /**
+   * Return if user can minimize maximized view on click.
+   */
+  public boolean isClickToMinimizeEnabled() {
+    return enableClickToMinimize;
+  }
+
+  /**
+   * Enable or disable click to minimize view when dragged view is maximized
+   * If your content have a touch/click listener (like YoutubePlayer), you
+   * need disable it to active this feature.
+   *
+   * @param enableClickToMinimize to enable or disable the click.
+   */
+  public void setClickToMinimizeEnabled(boolean enableClickToMinimize) {
+    this.enableClickToMinimize = enableClickToMinimize;
+  }
+
+  /**
+   *
+   * Slide the view based on scroll of the nav drawer.
+   * "setEnableTouch" user prevents click to expand while the drawer is moving.
+   * It's only possible to maximize the view when @slideOffset is equals to 0.0,
+   * in other words, closed.
+   *
+   * @param slideOffset Value between 0 and 1, represent the value of slide:
+   * 0.0 is equal to close drawer and 1.0 equals open drawer.
+   * @param drawerPosition Represent the position of nav drawer on X axis.
+   * @param width Width of nav drawer
+   */
+  public void slideHorizontally(float slideOffset, float drawerPosition, int width) {
+    draggableView.slideHorizontally(slideOffset, drawerPosition, width);
   }
 
   /**
@@ -156,6 +214,13 @@ public class DraggablePanel extends FrameLayout {
   }
 
   /**
+   * Configure the top Fragment to resize instead of scale it.
+   */
+  public void setTopFragmentResize(boolean topViewResize) {
+    draggableView.setTopViewResize(topViewResize);
+  }
+
+  /**
    * Close the custom view applying an animation to close the view to the left side of the screen.
    */
   public void closeToLeft() {
@@ -207,6 +272,9 @@ public class DraggablePanel extends FrameLayout {
     draggableView.attachBottomFragment(bottomFragment);
     draggableView.setDraggableListener(draggableListener);
     draggableView.setHorizontalAlphaEffectEnabled(enableHorizontalAlphaEffect);
+    draggableView.setClickToMaximizeEnabled(enableClickToMaximize);
+    draggableView.setClickToMinimizeEnabled(enableClickToMinimize);
+    draggableView.setTouchEnabled(enableTouchListener);
   }
 
   /**
@@ -268,6 +336,15 @@ public class DraggablePanel extends FrameLayout {
     this.enableHorizontalAlphaEffect =
         attributes.getBoolean(R.styleable.draggable_panel_enable_horizontal_alpha_effect,
             DEFAULT_ENABLE_HORIZONTAL_ALPHA_EFFECT);
+    this.enableClickToMaximize =
+        attributes.getBoolean(R.styleable.draggable_panel_enable_click_to_maximize_panel,
+            DEFAULT_ENABLE_CLICK_TO_MAXIMIZE);
+    this.enableClickToMinimize =
+        attributes.getBoolean(R.styleable.draggable_panel_enable_click_to_minimize_panel,
+            DEFAULT_ENABLE_CLICK_TO_MINIMIZE);
+    this.enableTouchListener =
+        attributes.getBoolean(R.styleable.draggable_panel_enable_touch_listener_panel,
+            DEFAULT_ENABLE_TOUCH_LISTENER);
     attributes.recycle();
   }
 
